@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+        "python.analysis.extraPaths": [
+            "${workspaceFolder}/src"
+        ],
+		"terminal.integrated.env.linux": {
+            "PYTHONPATH": "${workspaceFolder}/src"
+        },
+		"python.pythonPath": "${workspaceFolder}/src",
+        "python.defaultInterpreterPath": "~/.local/share/mamba/envs/soap/bin/python",
+	},
+}
