@@ -113,17 +113,10 @@ class TVG(tvg.TVG):
 
         assert len(distance_matrices) == len(kernels)
 
-        # TODO : rewrite using any
-        def has_infinite_entry(matrix):
-            for (i, j), value in np.ndenumerate(matrix):
-                if value >= INF:
-                    return True
-            return False
-
         # temporary truncation code
         T = 0
         for matrix in distance_matrices:
-            if has_infinite_entry(matrix):
+            if any(value >= INF for _, value in np.ndenumerate(matrix)):
                 break
             else:
                 T += 1
