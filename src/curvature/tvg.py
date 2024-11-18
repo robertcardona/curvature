@@ -1,8 +1,14 @@
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 import networkx as nx
 import numpy as np
 import portion as P
 import ot
+
+from typing import Callable
+from itertools import combinations
 
 import soap_parser.tvg as tvg
 from soap_parser.matrix import IntervalMatrix
@@ -39,13 +45,17 @@ class TVG(tvg.TVG):
         else:
             raise ValueError()
 
+    # TODO : finish; incomplete
     def get_temporal_cost(self, u: int, v: int, t: float, r: float) -> float:
         times = self.get_critical_times()
-        print(f"{times = }")
+        # print(f"{times = }")
         distances = [s for s in times if v in self.get_cone(u, t, r, s)]
         return min(distances)
 
-    def calculate_distances(self, r: float) -> list[list[list[float]]]:
+    def calculate_distances(self, 
+        r: float,
+        truncate: bool = False
+    ) -> list[list[list[float]]]:
         nodes = self.graph.nodes()
         n = len(nodes)
 
@@ -92,9 +102,8 @@ class TVG(tvg.TVG):
         
         return [matrix.tolist() for matrix in reversed(distance_matrices)]
 
+    # TODO : think summary graph is based on sample_times?
     def get_summary_graph_thickness(self) -> list[float]:
-        scale = 10
-
         critical_times = self.get_critical_times()
         # start, end = critical_times[0], critical_times[-1]
         lifetime = critical_times[-1] - critical_times[0]
@@ -102,11 +111,12 @@ class TVG(tvg.TVG):
         alive = lambda u, v : sum([i.upper - i.lower 
             for i in self.graph[u][v]["contacts"]]) / lifetime
 
-        return [alive(u, v) * scale for u, v in self.graph.edges]
+        return [alive(u, v) for u, v in self.graph.edges]
 
     def get_summary_graph_colors(self,
         distance_matrices: list[list[list[float]]],
         kernels: list[list[list[float]]],
+        calculate_curvature: Callable[[list[list[float]], list[list[float]], int, int, float, float], float],
         K: float = 1,
         r: float = 1
     ) -> list[float]:
@@ -121,7 +131,7 @@ class TVG(tvg.TVG):
             else:
                 T += 1
 
-        print(f"Truncation {T = }")
+        # print(f"Truncation {T = }")
 
         distance_matrices = distance_matrices[0:T]
         kernels = kernels[0:T]
@@ -134,6 +144,27 @@ class TVG(tvg.TVG):
                 # curvature[(u, v)].append(c)
 
         return [sum(curvature[(u, v)]) / T for u, v in self.graph.edges]
+
+    def bandpass_filter(self,
+        sample_times: list[float],
+        distance: Callable[[float, int, int], float],
+        threshold_low: float = -INF,
+        threshold_high: float = INF
+    ) -> "TVG":
+        nodes = self.graph.nodes
+        n = len(nodes)
+        matrix = IntervalMatrix(n, n)
+
+        for (start, end) in zip(sample_times, sample_times[1:]):
+            interval = P.closed(start, end)
+
+            for u, v in list(combinations(nodes, 2)):
+                print(f"distance[{start}][{u}][{v}] = {distance(start, u, v)}")
+                if threshold_low <= distance(start, u, v) <= threshold_high:
+                    matrix[u, v] = matrix[u, v] | interval
+        print(matrix)
+
+        return TVG(matrix)
 
     def get_summary_graph(self, K: float = 1, r: float = 1) -> nx.Graph:
         critical_times = self.get_critical_times()
@@ -163,114 +194,43 @@ def build_cycle_tvg(n: int, start: float = -P.inf, end: float = P.inf) -> TVG:
 
     return TVG(matrix)
 
-def radius_1_uniform_kernel(tvg: TVG,
-    sample_times: list[float]
-) -> list[list[list[float]]]:
+if __name__ == "__main__":
+    network = build_cycle_tvg(n := 5, start = 0, end = 5)
+    # TODO : add tests
 
-    n = len(tvg.graph.nodes())
+def build_complete_tvg(
+    n: int,
+    start: float = -P.inf,
+    end: float = P.inf
+) -> TVG:
+    matrix = IntervalMatrix(n, n, labels = [str(k) for k in range(n)])
 
-    kernel_list = []
-    for t in sample_times:
-        adjacency_matrix = np.array(tvg.get_adjacency_matrix_at(t))
-        # adjacency_matrix = np.array(
-        #     tvg.get_adjacency_matrix_at(t),
-        #     dtype = np.float64
-        # )
-        adjacency_matrix += np.eye(n, dtype = np.int64)
+    for u, v in combinations(list(range(n)), 2):
+        matrix[u, v] = P.closed(start, end)
 
-        normalized_matrix = adjacency_matrix / adjacency_matrix.sum(
-            axis = 1,
-            keepdims = True
-        )
-        kernel_list.append(normalized_matrix.tolist())
-
-    return kernel_list
-
-def calculate_curvature(
-    distance_matrix: list[list[float]],
-    kernel: list[list[float]],
-    source: int,
-    target: int,
-    K: float,
-    r: float
-) -> float:
-
-    source_measure = kernel[source]
-    target_measure = kernel[target]
-    
-    distance = distance_matrix[source][target]
-
-    if distance == 0:
-        return 0
-
-    W = ot.emd2(
-        source_measure,
-        target_measure,
-        distance_matrix,
-        processes = 1,
-        numItermax = 100_00,
-        log = False,
-        return_matrix = False,
-        center_dual = True,
-        numThreads = 1
-    )
-
-    curvature = INF
-    if W <= INF / 10 and distance <= INF / 10:
-        curvature = (distance - W) / distance
-
-    return curvature
-
-# TODO : check : length of first two related to r, maybe remove r
-def calculate_curvature_matrices(
-    distance_matrices,
-    kernels: list[list[list[float]]],
-    K: float,
-    r: float
-) -> list[list[list[float]]]:
-    assert len(distance_matrices) == len(kernels)
-    n = len(distance_matrices[0])
-
-    curvature_matrices = []
-    for distance_matrix, kernel in zip(distance_matrices, kernels):
-        curvature_matrix = np.zeros((n, n))
-        for i, j in IntervalMatrix.get_indices(n, n):
-            # TODO : possibly replace
-            curvature_matrix[i][j] = calculate_curvature(
-                distance_matrix,
-                kernel,
-                i,
-                j,
-                K,
-                r
-            )
-        curvature_matrices.append(curvature_matrix.tolist())
-    return curvature_matrices
-
-# TODO : `draw_scatter_plot` related to summary graph
-
-def draw_summary_graph(tvg: TVG, K = 1, r = 1) -> None:
-
-    critical_times = tvg.get_critical_times()
-    start_time, end_time = critical_times[0], critical_times[-1]
-    sample_times = np.arange(start_time, end_time, r).tolist()
-
-    distance_matrices = tvg.calculate_distances(r)
-    kernels = radius_1_uniform_kernel(tvg, sample_times)
-    
-    colors = tvg.get_summary_graph_colors(distance_matrices, kernels)
-    weights = tvg.get_summary_graph_thickness()
-
-    sg = tvg.graph
-    post = nx.shell_layout(sg)
-    nx.draw(sg, with_labels=True, font_weight='bold', edge_color=colors, width=weights)
-    plt.show()
-
-    return None
+    return TVG(matrix)
 
 if __name__ == "__main__":
-    n = 20
-    network = build_cycle_tvg(n, start = 0, end = 5)
+    network = build_complete_tvg(n := 5, start = 0, end = 5)
+    # TODO : add tests
+
+
+def index(sample_times: list[float], time: float) -> int:
+
+    for idx, (start, end) in enumerate(zip(sample_times, sample_times[1:])):
+        if start <= time < end:
+            return idx
+
+    raise ValueError(f"{time = } is outside the range of `sample_times`")
+
+if __name__ == "__main__":
+    sample_times: list[float] = [0, 1, 4, 5, 8]
+    assert index(sample_times, time = 0) == 0
+    assert index(sample_times, time = 3) == 1
+    assert index(sample_times, time = 6) == 3
+
+if __name__ == "__main__":
+    network = build_cycle_tvg(n := 20, start = 0, end = 5)
 
     # nodes = network.get_ball(0, 1, 0.5)
     assert [0, 1, 19] == network.get_ball(0, 0.5, 1)
@@ -283,16 +243,6 @@ if __name__ == "__main__":
     # print(f"{network.get_cone(0, 0, 1, 1)}")
     # print(f"{network.get_cone(0, 0, 1, 2)}")
 
-    print(f"{network.get_temporal_cost(0, 2, 0, 1)}")
+    # TODO : test `get_temporal_cost`
+    # print(f"{network.get_temporal_cost(0, 2, 0, 1)}")
     network.get_summary_graph()
-
-    # network.calculate_distances(1)
-
-
-    network = build_cycle_tvg(n := 5, start = 0, end = 10)
-    distance_matrices = network.calculate_distances(r := 1)
-    for m in distance_matrices:
-        # print(m)
-        pass
-
-    draw_summary_graph(network)
