@@ -1,6 +1,13 @@
 from curvature.tvg import *
 
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 import numpy as np
+
+# INF = 10 ** 30
+INF = float("inf")
 
 def radius_1_uniform_kernel(tvg: TVG,
     sample_times: list[float]
@@ -34,8 +41,8 @@ def calculate_curvature(
     r: float
 ) -> float:
 
-    source_measure = kernel[source]
-    target_measure = kernel[target]
+    # source_measure = kernel[source]
+    # target_measure = kernel[target]
     
     distance = distance_matrix[source][target]
 
@@ -43,8 +50,8 @@ def calculate_curvature(
         return 0
 
     W = ot.emd2(
-        source_measure,
-        target_measure,
+        source_measure := kernel[source],
+        target_measure := kernel[target],
         distance_matrix,
         processes = 1,
         numItermax = 100_00,
@@ -105,12 +112,16 @@ def draw_summary_graph(
     sample_times = np.arange(start_time, end_time, r).tolist()
 
     distance_matrices = tvg.calculate_distances(r)
+    # for dm in distance_matrices:
+    #     print(f"{dm = }")
     kernels = radius_1_uniform_kernel(tvg, sample_times)
     
     colors = tvg.get_summary_graph_colors(
         distance_matrices,
         kernels,
-        lambda matrix, kernel, u, v, K, r: calculate_curvature(matrix, kernel, u, v, K, r)
+        lambda matrix, kernel, u, v, K, r: calculate_curvature(matrix, kernel, u, v, K, r),
+        K = K,
+        r = r
     )
     weights = [w * scale for w in tvg.get_summary_graph_thickness()]
 
@@ -134,25 +145,34 @@ def draw_summary_graph(
     if title is not None:
         plt.title(title)
     plt.colorbar(sm, label = "Average Curvature", ax = plt.gca())
+    plt.savefig(f"{title}.png")
     plt.show()
 
     return None
 
-if __file__ == "__main__":
+if __name__ == "__main__":
     # network.calculate_distances(1)
 
-    start, end = 0, 10
+    n = 20
+    start, end = 0, 100
     sample_times = np.arange(start, end, 1).tolist()
 
-    network = build_cycle_tvg(n := 15, start = start, end = end)
+    network = build_cycle_tvg(n = n, start = start, end = end)
+    # network = build_complete_tvg(n := 15, start = start, end = end)
     distance_matrices = network.calculate_distances(r := 1)
     for m in distance_matrices:
         # print(m)
         pass
 
-    draw_summary_graph(network, title = "Scenario")
+    # draw_summary_graph(network, title = "Scenario")
 
     distance = lambda t, u, v: distance_matrices[index(sample_times, t)][u][v]
-    network_filtered = network.bandpass_filter(sample_times, distance, threshold_high = 1)
+    # network_filtered = network.bandpass_filter(sample_times, distance, threshold_high = 1)
 
-    tvg.draw_reeb_graph(network_filtered.get_reeb_graph(sample_times = sample_times))
+    # tvg.draw_reeb_graph(network_filtered.get_reeb_graph(sample_times = sample_times))
+
+    network = build_cycle_tvg(n := 15, start = start, end = end)
+    # draw_summary_graph(network, title = f"Cycle Graph : {n}")
+
+    network = build_complete_tvg(n = n, start = start, end = end)
+    draw_summary_graph(network, title = f"Complete Graph : {n}")
