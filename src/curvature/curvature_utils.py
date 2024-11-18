@@ -115,6 +115,8 @@ def draw_summary_graph(
     # for dm in distance_matrices:
     #     print(f"{dm = }")
     kernels = radius_1_uniform_kernel(tvg, sample_times)
+    # for kernel in kernels:
+    #     print(f"{kernel = }")
     
     colors = tvg.get_summary_graph_colors(
         distance_matrices,
@@ -125,7 +127,11 @@ def draw_summary_graph(
     )
     weights = [w * scale for w in tvg.get_summary_graph_thickness()]
 
-    norm = Normalize(vmin = min(colors), vmax = max(colors))
+    vmin, vmax = min(colors), max(colors)
+    if vmin < vmax:
+        norm = Normalize(vmin = min(colors), vmax = max(colors))
+    else:
+        norm = Normalize(vmin = 0, vmax = 1)
     cmap = matplotlib.colormaps.get_cmap("RdYlGn")
     # cmap = matplotlib.colormaps.get_cmap("viridis")
     sm = ScalarMappable(norm = norm, cmap = cmap)
@@ -172,7 +178,7 @@ if __name__ == "__main__":
     # tvg.draw_reeb_graph(network_filtered.get_reeb_graph(sample_times = sample_times))
 
     network = build_cycle_tvg(n := 15, start = start, end = end)
-    # draw_summary_graph(network, title = f"Cycle Graph : {n}")
+    draw_summary_graph(network, title = f"Cycle Graph : {n}")
 
     network = build_complete_tvg(n = n, start = start, end = end)
-    draw_summary_graph(network, title = f"Complete Graph : {n}")
+    # draw_summary_graph(network, title = f"Complete Graph : {n}")

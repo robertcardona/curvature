@@ -93,6 +93,7 @@ class TVG(tvg.TVG):
                         distance_matrix[row],
                         last_distance_matrix[column] + r
                     )
+            np.fill_diagonal(distance_matrix, 0)
 
             distance_matrices.append(distance_matrix)
             last_distance_matrix = distance_matrix
@@ -128,26 +129,27 @@ class TVG(tvg.TVG):
             else:
                 T += 1
 
-        T = T - 1 # temp to get rid of last case
+        # T = T - 1 # temp to get rid of last case
         print(f"Truncation {T = } / {len(distance_matrices)}")
 
         distance_matrices = distance_matrices[0:T]
         kernels = kernels[0:T]
 
-        counter_temp = 0
+        # counter_temp = 0
 
         curvature: dict[tuple[int, int], list[float]] = {}
         for matrix, kernel in zip(distance_matrices, kernels):
-            curvature_list_temp = []
+            # curvature_list_temp = []
             for u, v in self.graph.edges:
                 c = calculate_curvature(matrix, kernel, u, v, K, r)
                 curvature.setdefault((u, v), []).append(c)
-                curvature_list_temp.append(f"({u},{v}) : {c = }")
+                # curvature_list_temp.append(f"({u},{v}) : {c = }")
                 # curvature[(u, v)].append(c)
-            print(f"{counter_temp} : {curvature_list_temp = }")
-            counter_temp += 1
-        for u, v in self.graph.edges:
-            print(f"average curvature : {sum(curvature[(u, v)]) / T}")
+            # print(f"{counter_temp} : {curvature_list_temp = }")
+            # counter_temp += 1
+        # for u, v in self.graph.edges:
+        #     pass
+            # print(f"average curvature : {sum(curvature[(u, v)]) / T}")
         return [sum(curvature[(u, v)]) / T for u, v in self.graph.edges]
 
     def bandpass_filter(self,
