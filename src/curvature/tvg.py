@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 import portion as P
 import ot
+import random
 
 from typing import Callable
 from itertools import combinations
@@ -190,14 +191,102 @@ class TVG(tvg.TVG):
 
 TemporalNetwork = TVG
 
+def random_partition(l: list[int], k: int) -> list[list[int]]:
+    random.shuffle(l)
+
+    indices = list(range(len(l) - 1))
+    random.shuffle(indices)
+    
+    partition = []
+
+    partition_indices = indices[:k - 1]
+    partition_indices.sort()
+    # print(f"partition_indices = {partition_indices}")
+    
+    previous_index = 0
+    for i in [idx + 1 for idx in partition_indices]:        
+        partition.append(l[previous_index:i])
+        previous_index = i
+    partition.append(l[previous_index:])
+    # print(f"partition = {partition}")
+
+    assert len(partition) == k
+
+    return partition
+
+if __name__ == "__main__":
+    l, k = [0, 1, 2, 3, 4, 5, 6], 2
+
+    random.seed(42)
+    rpart = random_partition(l, k)
+
+    assert len(rpart) == 2
+    assert sorted(rpart[0]) == [1, 2, 3, 4]
+    assert sorted(rpart[1]) == [0, 5, 6]
+
+def build_clusters(
+    tvg: TVG,
+    sample_times: list[float],
+    randomize: bool = False
+) -> list[list[list[int]]]:
+    clusters_list: list[list[list[int]]] = []
+
+    for t in sample_times:
+        g = tvg.get_graph_at(t)
+        components = list(nx.connected_components(g))
+
+        if randomize:
+            clusters = random_partition(list(g.nodes()), len(components))
+        else:
+            clusters = [list(c) for c in components]
+
+        clusters_list.append(clusters)
+
+    return clusters_list
+
+if __name__ == "__main__":
+    # TODO : add unit tests
+
+    pass
+
+def cluster_signature(
+    matrix: list[list[float]],
+    clusters: list[list[int]]
+) -> float:
+    signature: float = 0
+
+    for cluster in clusters:
+        inner_sum: float = 0
+        for source, target in combinations(cluster, 2):
+            inner_sum += matrix[source][target]**2
+        signature += 1 / len(cluster) * inner_sum
+
+    return signature
+
+def signature_plot(
+    distance_matrices: list[list[list[float]]],
+    clusters_list: list[list[list[int]]]
+) -> list[float]:
+
+    assert len(distance_matrices) == len(clusters_list)
+
+    signatures: list[float] = []
+    for matrix, cluster in zip(distance_matrices, clusters_list):
+        signature = cluster_signature(matrix, cluster)
+        signatures.append(signature)
+
+    return signatures
+
+if __name__ == "__main__":
+    # TODO : add unit test
+    pass
+
 def build_cycle_tvg(n: int, start: float = -P.inf, end: float = P.inf) -> TVG:
     matrix = IntervalMatrix(n, n, labels = [str(k) for k in range(n)])
 
     for k in range(n - 1):
         matrix[k, k + 1] = P.closed(start, end)
     matrix[0, n - 1] = P.closed(start, end)
-
-    # print(matrix)
 
     return TVG(matrix)
 
