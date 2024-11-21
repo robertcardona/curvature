@@ -238,15 +238,55 @@ def build_clusters(
         if randomize:
             clusters = random_partition(list(g.nodes()), len(components))
         else:
-            clusters = [list(c) for c in components]
+            clusters = [list(c) for c in components] # TODO : maybe set(c)
 
         clusters_list.append(clusters)
 
     return clusters_list
 
 if __name__ == "__main__":
-    # TODO : add unit tests
+    n = 3
+    matrix = IntervalMatrix(n, n, labels = [str(k) for k in range(n)])
+    matrix[0, 1] = P.closed(0, 1) | P.closed(4, 5)
+    matrix[1, 2] = P.closed(2, 3)
 
+    network = TVG(matrix)
+    # tvg.draw_reeb_graph(network.get_reeb_graph([0, 1, 2, 3, 4, 5]))
+    sample_times: list[float] = [0, 1, 2, 3, 4]
+
+    # tvg.draw_reeb_graph(network.get_reeb_graph(sample_times = sample_times))
+
+    clusters_list_a = [list(nx.connected_components(network.get_graph_at(t)))
+                        for t in sample_times]
+    # print(f"{clusters_list_a = }")
+    # tvg.draw_reeb_graph(network.get_reeb_graph(
+    #     sample_times = sample_times,
+    #     clusters_list = clusters_list_a
+    #     )
+    # )
+
+    # test default case
+    clusters_list_b = build_clusters(network, sample_times)
+    for cluster_a, cluster_b in zip(clusters_list_a, clusters_list_b):
+        for component_a, component_b in zip(cluster_a, cluster_b):
+            assert component_a == set(component_b)
+            # print(f"{component_a = } | {component_b = }")
+
+    # TODO : test random case
+    clusters_list = [
+        [[0, 2], [1]],
+        [[0], [1], [2]],
+        [[0], [1, 2]],
+        [[0], [1], [2]],
+        [[0], [1, 2]],
+    ]
+    clusters_list_b = build_clusters(network, sample_times, randomize = True)
+    # tvg.draw_reeb_graph(network.get_reeb_graph(
+    #     sample_times = sample_times,
+    #     clusters_list = clusters_list_b
+    #     )
+    # )
+    # print(f"{clusters_list = }")
     pass
 
 def cluster_signature(
@@ -263,7 +303,7 @@ def cluster_signature(
 
     return signature
 
-def signature_plot(
+def calculate_signatures(
     distance_matrices: list[list[list[float]]],
     clusters_list: list[list[list[int]]]
 ) -> list[float]:
@@ -279,7 +319,26 @@ def signature_plot(
 
 if __name__ == "__main__":
     # TODO : add unit test
-    pass
+    n = 3
+    matrix = IntervalMatrix(n, n, labels = [str(k) for k in range(n)])
+    matrix[0, 1] = P.closed(0, 1) | P.closed(4, 5)
+    matrix[1, 2] = P.closed(2, 3)
+
+    network = TVG(matrix)
+    distance_matrices = network.calculate_distances(r = 1)
+    # tvg.draw_reeb_graph(network.get_reeb_graph([0, 1, 2, 3, 4, 5]))
+    
+    sample_times = [0, 1, 2, 3, 4]
+
+    clusters_list_a = build_clusters(network, sample_times)
+    signatures_a = calculate_signatures(distance_matrices, clusters_list_a)
+
+    clusters_list_b = build_clusters(network, sample_times, randomize = True)
+    signatures_b = calculate_signatures(distance_matrices, clusters_list_b)
+
+    print(f"{signatures_a = }")
+    print(f"{signatures_b = }")
+
 
 def build_cycle_tvg(n: int, start: float = -P.inf, end: float = P.inf) -> TVG:
     matrix = IntervalMatrix(n, n, labels = [str(k) for k in range(n)])
@@ -320,7 +379,8 @@ def index(sample_times: list[float], time: float) -> int:
     raise ValueError(f"{time = } is outside the range of `sample_times`")
 
 if __name__ == "__main__":
-    sample_times: list[float] = [0, 1, 4, 5, 8]
+    # sample_times: list[float] = [0, 1, 4, 5, 8]
+    sample_times = [0, 1, 4, 5, 8]
     assert index(sample_times, time = 0) == 0
     assert index(sample_times, time = 3) == 1
     assert index(sample_times, time = 6) == 3
