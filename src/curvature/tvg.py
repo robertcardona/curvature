@@ -101,6 +101,22 @@ class TVG(tvg.TVG):
         
         return [matrix.tolist() for matrix in reversed(distance_matrices)]
 
+    def calculate_averaged_distances(self,
+        distance_matrices: list[list[list[float]]]
+    ) -> list[list[float]]:
+        n = len(self.graph.nodes())
+        matrix_sum = np.zeros((n, n))
+
+        for i, matrix in enumerate(distance_matrices):
+            if any(value >= INF for _, value in np.ndenumerate(matrix)):
+                break
+            matrix_sum += matrix
+        
+        print(f"First `inf` found at {i} / {len(distance_matrices)}")
+
+        # average_matrix: list[list[float]] = [[]]
+        return (matrix_sum / i).tolist()
+
     # TODO : think summary graph is based on sample_times?
     def get_summary_graph_thickness(self) -> list[float]:
         critical_times = self.get_critical_times()
@@ -294,7 +310,7 @@ def cluster_signature(
     clusters: list[list[int]]
 ) -> float:
     signature: float = 0
-
+    # print(f"{matrix}")
     for cluster in clusters:
         inner_sum: float = 0
         for source, target in combinations(cluster, 2):
