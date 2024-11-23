@@ -13,6 +13,7 @@ from soap_parser.matrix import IntervalMatrix
 
 INF = float("inf")
 # INF = 10 ** 30
+NAN = float("nan")
 
 class TVG(tvg.TVG):
 
@@ -52,7 +53,7 @@ class TVG(tvg.TVG):
 
     def calculate_distances(self, 
         r: float,
-        truncate: bool = False
+        # truncate: bool = False
     ) -> list[list[list[float]]]:
         nodes = self.graph.nodes()
         n = len(nodes)
@@ -98,24 +99,36 @@ class TVG(tvg.TVG):
 
             distance_matrices.append(distance_matrix)
             last_distance_matrix = distance_matrix
+
+        # reverse list
+        # distance_matrices = [matrix for matrix in reversed(distance_matrices)]
+
+        # T = len(distance_matrices)
+        # if truncate:
+        #     for i, matrix in enumerate(distance_matrices):
+        #         if any(value >= INF for _, value in np.ndenumerate(matrix)):
+        #             break
+        #     T = i
+        
+        # return [matrix.tolist() for matrix in distance_matrices[:T]]
         
         return [matrix.tolist() for matrix in reversed(distance_matrices)]
 
-    def calculate_averaged_distances(self,
-        distance_matrices: list[list[list[float]]]
-    ) -> list[list[float]]:
-        n = len(self.graph.nodes())
-        matrix_sum = np.zeros((n, n))
+    # def calculate_averaged_distances(self,
+    #     distance_matrices: list[list[list[float]]]
+    # ) -> list[list[float]]:
+    #     n = len(self.graph.nodes())
+    #     matrix_sum = np.zeros((n, n))
 
-        for i, matrix in enumerate(distance_matrices):
-            if any(value >= INF for _, value in np.ndenumerate(matrix)):
-                break
-            matrix_sum += matrix
+    #     for i, matrix in enumerate(distance_matrices):
+    #         if any(value >= INF for _, value in np.ndenumerate(matrix)):
+    #             break
+    #         matrix_sum += matrix
         
-        print(f"First `inf` found at {i} / {len(distance_matrices)}")
+    #     print(f"First `inf` found at {i} / {len(distance_matrices)}")
 
-        # average_matrix: list[list[float]] = [[]]
-        return (matrix_sum / i).tolist()
+    #     # average_matrix: list[list[float]] = [[]]
+    #     return (matrix_sum / i).tolist()
 
     # TODO : think summary graph is based on sample_times?
     def get_summary_graph_thickness(self) -> list[float]:
@@ -214,11 +227,11 @@ def calculate_averaged_distances(
     matrix_sum = np.zeros((n, n))
 
     for i, matrix in enumerate(distance_matrices):
-        if any(value >= INF for _, value in np.ndenumerate(matrix)):
+        if any(value >= INF or np.isnan(value) for _, value in np.ndenumerate(matrix)):
             break
         matrix_sum += matrix
         
-    print(f"First `inf` found at {i} / {len(distance_matrices)}")
+    print(f"First `inf`/`nan` found at {i} / {len(distance_matrices)}")
 
     # average_matrix: list[list[float]] = [[]]
     return (matrix_sum / i).tolist()
