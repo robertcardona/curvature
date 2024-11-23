@@ -207,6 +207,22 @@ class TVG(tvg.TVG):
 
 TemporalNetwork = TVG
 
+def calculate_averaged_distances(
+    distance_matrices: list[list[list[float]]]
+) -> list[list[float]]:
+    n = len(distance_matrices[0])
+    matrix_sum = np.zeros((n, n))
+
+    for i, matrix in enumerate(distance_matrices):
+        if any(value >= INF for _, value in np.ndenumerate(matrix)):
+            break
+        matrix_sum += matrix
+        
+    print(f"First `inf` found at {i} / {len(distance_matrices)}")
+
+    # average_matrix: list[list[float]] = [[]]
+    return (matrix_sum / i).tolist()
+
 def random_partition(l: list[int], k: int) -> list[list[int]]:
     random.shuffle(l)
 
