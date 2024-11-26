@@ -53,7 +53,7 @@ class TVG(tvg.TVG):
 
     def calculate_distances(self, 
         r: float,
-        # truncate: bool = False
+        truncate: bool = False
     ) -> list[list[list[float]]]:
         nodes = self.graph.nodes()
         n = len(nodes)
@@ -101,18 +101,18 @@ class TVG(tvg.TVG):
             last_distance_matrix = distance_matrix
 
         # reverse list
-        # distance_matrices = [matrix for matrix in reversed(distance_matrices)]
+        distance_matrices = [matrix for matrix in reversed(distance_matrices)]
 
-        # T = len(distance_matrices)
-        # if truncate:
-        #     for i, matrix in enumerate(distance_matrices):
-        #         if any(value >= INF for _, value in np.ndenumerate(matrix)):
-        #             break
-        #     T = i
+        T = len(distance_matrices)
+        if truncate:
+            for i, matrix in enumerate(distance_matrices):
+                if any(value >= INF for _, value in np.ndenumerate(matrix)):
+                    break
+            T = i
         
-        # return [matrix.tolist() for matrix in distance_matrices[:T]]
+        return [matrix.tolist() for matrix in distance_matrices[:T]]
         
-        return [matrix.tolist() for matrix in reversed(distance_matrices)]
+        # return [matrix.tolist() for matrix in reversed(distance_matrices)]
 
     # def calculate_averaged_distances(self,
     #     distance_matrices: list[list[list[float]]]
