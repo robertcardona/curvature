@@ -4,7 +4,6 @@ from curvature.curvature_utils import *
 
 from soap_parser.visualization import convert_figure, save_gif, circular_pos, show_gif
 
-
 import io
 # import matplotlib
 import matplotlib.pyplot as plt
@@ -12,6 +11,8 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 
 from PIL import Image, ImageFile
+
+# plt.rcParams["figure.figsize"] = (5, 5)
 
 def draw_summary_graph(
     tvg: TVG,
@@ -107,13 +108,19 @@ def save_tvg(
     images: list[ImageFile.ImageFile] = []
 
     for t in sample_times:
+        figure = plt.figure(figsize = (5, 5))
         g = tvg.get_graph_at(t)
         # pos = circular_pos(g)
 
         nx.draw(g, pos = pos, with_labels=True, font_weight='bold')
+
+        plt.title(f"{t = }")
         figure = plt.gcf()
+        # plt.show()
         images.append(convert_figure(figure))
         plt.clf()
+        plt.cla()
+        plt.close()
 
     save_gif(filename, images)
 
@@ -127,6 +134,8 @@ if __name__ == "__main__":
     sample_times = np.arange(start, end, 1).tolist()
 
     network = build_cycle_tvg(n = n, start = start, end = end)
+    save_tvg(network, f"cycle.gif", sample_times = sample_times)
+    # display(show_gif(f"cycle.gif"))
     # network = build_complete_tvg(n := 15, start = start, end = end)
     distance_matrices = network.calculate_distances(r := 1)
     for m in distance_matrices:
