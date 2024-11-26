@@ -2,7 +2,7 @@
 from curvature.tvg import *
 from curvature.curvature_utils import *
 
-from soap_parser.visualization import convert_figure, save_gif
+from soap_parser.visualization import convert_figure, save_gif, circular_pos, show_gif
 
 
 import io
@@ -64,21 +64,23 @@ def draw_summary_graph(
     edge_colors = [sm.to_rgba(np.array(color)) for color in colors]
 
     # build pos
-    pos: dict[int, tuple[int, int]] = dict()
-    sg = tvg.graph
-    n = len(sg.nodes())
-    for node in sg.nodes():
-        pos[node] = (np.cos(2 * np.pi * node / n), np.sin(2 * np.pi * node / n))
+    # pos: dict[int, tuple[int, int]] = dict()
+    # sg = tvg.graph
+    # n = len(sg.nodes())
+    # for node in sg.nodes():
+    #     pos[node] = (np.cos(2 * np.pi * node / n), np.sin(2 * np.pi * node / n))
         # print(f"{node = }")
     # print(f"{pos = }")
+    pos = circular_pos(sg := tvg.graph)
 
     # post = nx.shell_layout(sg)
     nx.draw(sg, pos = pos, with_labels=True, font_weight='bold', edge_color=edge_colors, width=weights)
-    if title is not None:
-        plt.title(title)
-    plt.colorbar(sm, label = "Average Curvature", ax = plt.gca(), extend="both", extendrect = True)
+    plt.colorbar(sm, label = "Average Curvature", ax = plt.gca())
     # plt.savefig(f"{title}.png")
     # plt.show()
+
+    if title is not None:
+        plt.title(f"Summary Graph {title}")
     
     figure = plt.gcf()
     # plt.clf()
@@ -91,6 +93,31 @@ def draw_summary_graph(
     return image
 # image = convert_figure(plt.gcf())
 
+def save_tvg(
+    tvg: TVG,
+    filename: str,
+    sample_times: list[float] | None = None
+) -> None:
+
+    if sample_times is None:
+        sample_times = tvg.get_critical_times()
+
+    pos = circular_pos(tvg.get_graph_at(sample_times[0]))
+
+    images: list[ImageFile.ImageFile] = []
+
+    for t in sample_times:
+        g = tvg.get_graph_at(t)
+        # pos = circular_pos(g)
+
+        nx.draw(g, pos = pos, with_labels=True, font_weight='bold')
+        figure = plt.gcf()
+        images.append(convert_figure(figure))
+        plt.clf()
+
+    save_gif(filename, images)
+
+    return None
 
 if __name__ == "__main__":
     # network.calculate_distances(1)
