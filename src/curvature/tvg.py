@@ -196,7 +196,7 @@ class TVG(tvg.TVG):
             interval = P.closed(start, end)
 
             for u, v in list(combinations(nodes, 2)):
-                print(f"distance[{start}][{u}][{v}] = {distance(start, u, v)}")
+                # print(f"distance[{start}][{u}][{v}] = {distance(start, u, v)}")
                 if threshold_low <= distance(start, u, v) <= threshold_high:
                     matrix[u, v] = matrix[u, v] | interval
         # print(matrix)

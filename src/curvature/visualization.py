@@ -90,6 +90,8 @@ def draw_summary_graph(
     # image.show()
     # image.save(f"{title}.png", "png")
     plt.clf()
+    plt.cla()
+    plt.close()
 
     return image
 # image = convert_figure(plt.gcf())
